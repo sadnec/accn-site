@@ -1,0 +1,5 @@
+# Le fichier de réglages ne doit jamais être appelé directement
+<Files "config.php">
+  Require all denied
+</Files>
+Options -Indexes

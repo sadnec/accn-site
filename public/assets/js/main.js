@@ -4,12 +4,13 @@
 
   /* ------------------------------------------------------------------
      CONFIGURATION DES FORMULAIRES
-     Renseigner ici l'adresse du service qui recevra les formulaires
-     (Formspree, Web3Forms, script PHP de l'hébergeur…).
-     Tant qu'elle est vide, la demande est préparée dans WhatsApp et
-     le visiteur n'a plus qu'à l'envoyer au cabinet.
+     Sur l'hébergement définitif (PHP), les demandes sont envoyées par
+     e-mail via api/envoi.php. Sur les adresses de présentation sans PHP
+     (Netlify, GitHub Pages, poste local), la demande est préparée dans
+     WhatsApp et le visiteur n'a plus qu'à l'envoyer au cabinet.
      ------------------------------------------------------------------ */
-  var FORM_ENDPOINT = "";
+  var SANS_PHP = /(\.netlify\.app|\.github\.io)$|^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+  var FORM_ENDPOINT = SANS_PHP ? "" : "api/envoi.php";
   var WHATSAPP_NUMBER = "237675780245";
 
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -313,6 +314,14 @@
 
   document.querySelectorAll("form[data-form]").forEach(function (form) {
     form.setAttribute("novalidate", "");
+    var shownAt = Date.now();
+
+    // Champ piège invisible : les robots le remplissent, pas les visiteurs
+    var trap = document.createElement("div");
+    trap.className = "visually-hidden";
+    trap.setAttribute("aria-hidden", "true");
+    trap.innerHTML = '<label>Ne pas remplir <input type="text" name="site_web" tabindex="-1" autocomplete="off"></label>';
+    form.appendChild(trap);
 
     var note = form.querySelector("[data-form-note]");
     if (note && !FORM_ENDPOINT) note.textContent = "Votre demande sera transmise à un conseiller ACCN via WhatsApp.";
@@ -346,17 +355,28 @@
 
       var data = new FormData(form);
       data.append("_subject", form.getAttribute("data-subject") || "Demande depuis le site ACCN");
+      data.append("_resume", text);
+      data.append("_page", document.title + " (" + window.location.pathname + ")");
+      data.append("_duree", String(Date.now() - shownAt));
 
       fetch(FORM_ENDPOINT, { method: "POST", body: data, headers: { Accept: "application/json" } })
         .then(function (res) {
-          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.json().catch(function () { return {}; }).then(function (json) {
+            if (!res.ok || !json.ok) throw { serveur: json.erreur || "" };
+          });
+        })
+        .then(function () {
           form.reset();
           form.querySelectorAll('input[name="profil"]').forEach(function (i) { i.dispatchEvent(new Event("change")); });
           setStatus(form, "success", "Merci ! Votre demande a bien été envoyée. Un conseiller ACCN vous recontacte très vite.");
         })
-        .catch(function () {
+        .catch(function (err) {
+          // Message du serveur s'il y en a un (fichier trop lourd…), sinon message générique (coupure réseau…)
+          var detail = err && err.serveur
+            ? err.serveur.replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }) + " "
+            : "L'envoi n'a pas abouti. ";
           setStatus(form, "error",
-            "L'envoi n'a pas abouti. Vous pouvez réessayer ou " +
+            detail + "Vous pouvez réessayer ou " +
             '<a href="' + waLink + '" target="_blank" rel="noopener">nous écrire sur WhatsApp</a>.');
         })
         .finally(function () {

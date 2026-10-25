@@ -21,9 +21,12 @@ const SITE = {
   hours: "Du lundi au vendredi de 8h00 à 17h30",
   hoursShort: "Lun – Ven : 8h00 – 17h30",
   mapsUrl: "https://www.google.com/maps/search/?api=1&query=Rue+Bou%C3%A9+Lapeyre+Akwa+Douala+Cameroun",
-  // Version de présentation : demande aux moteurs de recherche de ne pas indexer le site.
-  // Passer à true le jour de la mise en ligne sur le domaine définitif.
-  indexable: false,
+  // Réglés au moment de la génération (variables d'environnement, voir README) :
+  // - SITE_INDEXABLE=true autorise Google à indexer le site (jour du lancement) ;
+  //   sinon une balise noindex protège les versions de présentation.
+  // - SITE_URL=https://accn-assurances.cm ajoute les liens canoniques et le plan du site.
+  indexable: process.env.SITE_INDEXABLE === "true",
+  url: (process.env.SITE_URL || "").replace(/\/+$/, ""),
 };
 
 /* ==========================================================================
@@ -576,16 +579,17 @@ function footer(quoteHref = "devis.html") {
   <div class="mobile-cta"><a class="btn btn-cta btn-block" href="${quoteHref}">Demander un devis gratuit</a></div>`;
 }
 
-function layout({ file, title, description, active, quoteHref, body }) {
+function layout({ file, title, description, active, quoteHref, body, base }) {
+  const canonical = SITE.url && file !== "404.html" ? `\n  <link rel="canonical" href="${SITE.url}/${file === "index.html" ? "" : file}">` : "";
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script>document.documentElement.classList.add("js")</script>
+  <script>document.documentElement.classList.add("js")</script>${base ? `\n  <base href="${base}">` : ""}
   <title>${esc(title)}</title>
   <meta name="description" content="${esc(description)}">
-  <meta name="theme-color" content="#333399">${SITE.indexable ? "" : '\n  <meta name="robots" content="noindex, nofollow">'}
+  <meta name="theme-color" content="#333399">${SITE.indexable && file !== "404.html" ? "" : '\n  <meta name="robots" content="noindex, nofollow">'}${canonical}
   <meta property="og:type" content="website">
   <meta property="og:title" content="${esc(title)}">
   <meta property="og:description" content="${esc(description)}">
@@ -1284,6 +1288,30 @@ pages.push({
     </section>`,
 });
 
+// ---- Page introuvable (servie par l'hébergeur pour toute adresse inconnue)
+pages.push({
+  file: "404.html",
+  // Chemins absolus : la page peut être affichée à n'importe quelle adresse du site
+  base: "/",
+  title: "Page introuvable – ACCN, courtier en assurance à Douala",
+  description: "Cette page n’existe pas ou a été déplacée.",
+  body: `${pageHero({ crumbs: [["Page introuvable"]], title: "Page introuvable", lead: "Cette page n’existe pas ou a été déplacée." })}
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2 class="title-rule">Où souhaitez-vous aller ?</h2>
+        </div>
+        <div class="btn-row">
+          <a class="btn btn-primary" href="index.html">Retour à l’accueil</a>
+          <a class="btn btn-outline" href="particuliers.html">Particuliers</a>
+          <a class="btn btn-outline" href="professionnels.html">Professionnels</a>
+          <a class="btn btn-cta" href="devis.html">Demander un devis gratuit</a>
+        </div>
+      </div>
+    </section>`,
+});
+
 /* ==========================================================================
    Écriture
    ========================================================================== */
@@ -1296,7 +1324,19 @@ writeFileSync(
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#333399"/><text x="32" y="47" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="42" fill="#fff">A</text><rect x="14" y="52" width="36" height="3" fill="#993300"/></svg>`,
   "utf8"
 );
-writeFileSync(join(OUT, "robots.txt"), `User-agent: *\n${SITE.indexable ? "Allow" : "Disallow"}: /\n`, "utf8");
+writeFileSync(
+  join(OUT, "robots.txt"),
+  `User-agent: *\n${SITE.indexable ? "Allow" : "Disallow"}: /\n${SITE.url ? `\nSitemap: ${SITE.url}/sitemap.xml\n` : ""}`,
+  "utf8"
+);
+if (SITE.url) {
+  const today = new Date().toISOString().slice(0, 10);
+  const urls = pages
+    .filter((p) => p.file !== "404.html")
+    .map((p) => `  <url><loc>${SITE.url}/${p.file === "index.html" ? "" : p.file}</loc><lastmod>${today}</lastmod></url>`)
+    .join("\n");
+  writeFileSync(join(OUT, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`, "utf8");
+}
 
 if (!SITE.facebook) console.warn("⚠  Adresse Facebook non renseignée (SITE.facebook) : les boutons Facebook pointent vers #.");
 console.log(`${pages.length} pages générées dans ${OUT}`);

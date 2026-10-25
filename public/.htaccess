@@ -1,0 +1,50 @@
+# Réglages de l'hébergement (Apache / LiteSpeed, cPanel)
+
+Options -Indexes
+ErrorDocument 404 /404.html
+
+# --- HTTPS obligatoire --------------------------------------------------------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # Adresse unique sans « www » (décommenter une fois le domaine en place)
+  # RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+  # RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# --- Fichiers à ne jamais servir ----------------------------------------------
+<FilesMatch "^\.ftp-deploy-sync-state\.json$|^\.user\.ini$|\.(md|mjs|toml|yml)$">
+  Require all denied
+</FilesMatch>
+
+# --- Compression --------------------------------------------------------------
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml application/javascript application/json image/svg+xml
+</IfModule>
+
+# --- Cache navigateur ---------------------------------------------------------
+# Les pages HTML sont toujours revalidées ; CSS et JS sont gardés 1 jour,
+# les images 30 jours (les noms de fichiers ne changent pas d'une version à l'autre).
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresDefault "access plus 1 hour"
+  ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType text/css "access plus 1 day"
+  ExpiresByType application/javascript "access plus 1 day"
+  ExpiresByType image/jpeg "access plus 30 days"
+  ExpiresByType image/png "access plus 30 days"
+  ExpiresByType image/svg+xml "access plus 30 days"
+</IfModule>
+
+# --- En-têtes de sécurité -----------------------------------------------------
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+  # À activer seulement quand le HTTPS fonctionne sur tout le domaine :
+  # Header always set Strict-Transport-Security "max-age=31536000"
+</IfModule>
