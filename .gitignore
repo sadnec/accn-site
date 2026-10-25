@@ -1,0 +1,10 @@
+# Configuration locale de l'éditeur / de Claude
+.claude/
+
+# Système
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Dépendances éventuelles
+node_modules/
