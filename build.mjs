@@ -21,6 +21,9 @@ const SITE = {
   hours: "Du lundi au vendredi de 8h00 à 17h30",
   hoursShort: "Lun – Ven : 8h00 – 17h30",
   mapsUrl: "https://www.google.com/maps/search/?api=1&query=Rue+Bou%C3%A9+Lapeyre+Akwa+Douala+Cameroun",
+  // Version de présentation : demande aux moteurs de recherche de ne pas indexer le site.
+  // Passer à true le jour de la mise en ligne sur le domaine définitif.
+  indexable: false,
 };
 
 /* ==========================================================================
@@ -581,7 +584,7 @@ function layout({ file, title, description, active, quoteHref, body }) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${esc(title)}</title>
   <meta name="description" content="${esc(description)}">
-  <meta name="theme-color" content="#333399">
+  <meta name="theme-color" content="#333399">${SITE.indexable ? "" : '\n  <meta name="robots" content="noindex, nofollow">'}
   <meta property="og:type" content="website">
   <meta property="og:title" content="${esc(title)}">
   <meta property="og:description" content="${esc(description)}">
@@ -1290,7 +1293,7 @@ writeFileSync(
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#333399"/><text x="32" y="47" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="42" fill="#fff">A</text><rect x="14" y="52" width="36" height="3" fill="#993300"/></svg>`,
   "utf8"
 );
-writeFileSync(join(OUT, "robots.txt"), "User-agent: *\nAllow: /\n", "utf8");
+writeFileSync(join(OUT, "robots.txt"), `User-agent: *\n${SITE.indexable ? "Allow" : "Disallow"}: /\n`, "utf8");
 
 if (!SITE.facebook) console.warn("⚠  Adresse Facebook non renseignée (SITE.facebook) : les boutons Facebook pointent vers #.");
 console.log(`${pages.length} pages générées dans ${OUT}`);

@@ -30,3 +30,8 @@ Pour voir le site : `node serve.mjs`, puis ouvrir http://localhost:4173.
 4. **Photos** : les images actuelles viennent de l'ancien site. Des photos réelles du cabinet sont recommandées.
 5. **Mentions légales et politique de confidentialité** : à ajouter quand ACCN aura fourni les informations (raison sociale, RCCM, NIU, agrément).
 6. **Sitemap** : à générer une fois le nom de domaine choisi.
+7. **Référencement** : la version de présentation demande à Google de ne pas l'indexer. Le jour du lancement, passer `indexable` à `true` dans `SITE` (`build.mjs`).
+
+## Version de présentation en ligne
+
+Chaque envoi sur la branche `main` republie automatiquement le site sur GitHub Pages : https://sadnec.github.io/accn-site/
