@@ -1,0 +1,4 @@
+# Configuration Netlify : génère les pages puis publie le dossier public/
+[build]
+  command = "node build.mjs"
+  publish = "public"
