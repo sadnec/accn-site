@@ -12,15 +12,101 @@
   var FORM_ENDPOINT = "";
   var WHATSAPP_NUMBER = "237675780245";
 
-  /* ---------- En-tête : ombre au défilement ---------- */
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- En-tête : ombre puis version compacte au défilement ---------- */
   var header = document.querySelector(".site-header");
   if (header) {
     var onScroll = function () {
-      header.classList.toggle("is-scrolled", window.scrollY > 8);
+      var y = window.scrollY;
+      header.classList.toggle("is-scrolled", y > 8);
+      // Deux seuils différents pour éviter que l'en-tête ne clignote autour d'une valeur
+      if (y > 120) header.classList.add("is-compact");
+      else if (y < 40) header.classList.remove("is-compact");
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
   }
+
+  /* ---------- Apparition des blocs au défilement ---------- */
+  var REVEAL = [
+    ".section-head", ".card", ".split > *", ".faq-item", ".step", ".cover-item", ".cta-band",
+    ".quote-intro", ".form-card", ".partners-marquee", ".coord-list li", ".product-main > *", ".aside-help"
+  ].join(",");
+
+  if (!reduceMotion && "IntersectionObserver" in window) {
+    var tagged = [];
+    document.querySelectorAll(REVEAL).forEach(function (el) {
+      // Rien dans les bandeaux du haut ni dans l'en-tête, et pas d'animation imbriquée
+      if (el.closest(".hero, .page-hero, .site-header") || (el.parentElement && el.parentElement.closest("[data-reveal]"))) return;
+      el.setAttribute("data-reveal", "");
+      tagged.push(el);
+    });
+    // Effet cascade entre éléments voisins (cartes d'une même grille…)
+    tagged.forEach(function (el) {
+      var siblings = Array.prototype.filter.call(el.parentElement.children, function (c) { return c.hasAttribute("data-reveal"); });
+      var i = siblings.indexOf(el);
+      if (i > 0) el.style.setProperty("--reveal-delay", (i % 4) * 90 + "ms");
+    });
+
+    var done = function (el) {
+      el.removeAttribute("data-reveal");
+      el.classList.remove("is-visible");
+      el.style.removeProperty("--reveal-delay");
+    };
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        var el = entry.target;
+        observer.unobserve(el);
+        el.classList.add("is-visible");
+        // Une fois apparu, l'élément retrouve ses propres transitions (survol des cartes…)
+        setTimeout(function () { done(el); }, 1100);
+      });
+    }, { rootMargin: "0px 0px -8% 0px" });
+    tagged.forEach(function (el) { observer.observe(el); });
+  }
+
+  /* ---------- Bandeau partenaires défilant ---------- */
+  document.querySelectorAll("[data-marquee]").forEach(function (marquee) {
+    if (reduceMotion) return;
+    var track = marquee.querySelector(".partners-track");
+    if (!track) return;
+    Array.prototype.slice.call(track.children).forEach(function (item) {
+      var clone = item.cloneNode(true);
+      clone.setAttribute("aria-hidden", "true");
+      clone.querySelectorAll("a, button").forEach(function (a) { a.setAttribute("tabindex", "-1"); });
+      track.appendChild(clone);
+    });
+    // Vitesse constante (≈ 40 px/s) quel que soit le nombre de logos
+    marquee.style.setProperty("--marquee-duration", Math.max(20, track.scrollWidth / 2 / 40) + "s");
+    marquee.classList.add("is-running");
+  });
+
+  /* ---------- FAQ : ouverture et fermeture fluides ---------- */
+  document.querySelectorAll("details.faq-item").forEach(function (item) {
+    if (reduceMotion || !item.animate) return;
+    var summary = item.querySelector("summary");
+    var answer = item.querySelector(".faq-answer");
+    var running = null;
+    summary.addEventListener("click", function (e) {
+      e.preventDefault();
+      if (running) running.cancel();
+      var opening = !item.open;
+      if (opening) item.open = true;
+      var h = answer.scrollHeight;
+      running = answer.animate(
+        opening
+          ? [{ height: "0px", opacity: 0 }, { height: h + "px", opacity: 1 }]
+          : [{ height: h + "px", opacity: 1 }, { height: "0px", opacity: 0 }],
+        { duration: 280, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
+      );
+      running.onfinish = function () {
+        if (!opening) item.open = false;
+        running = null;
+      };
+    });
+  });
 
   /* ---------- Menu mobile ---------- */
   var body = document.body;

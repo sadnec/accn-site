@@ -582,6 +582,7 @@ function layout({ file, title, description, active, quoteHref, body }) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>document.documentElement.classList.add("js")</script>
   <title>${esc(title)}</title>
   <meta name="description" content="${esc(description)}">
   <meta name="theme-color" content="#333399">${SITE.indexable ? "" : '\n  <meta name="robots" content="noindex, nofollow">'}
@@ -636,7 +637,7 @@ function offerCard(o) {
 
 function offerWideCard(o) {
   return `<article class="card offer-wide">
-            <img src="assets/img/${o.slug}.jpg" alt="" width="800" height="500" loading="lazy">
+            <div class="offer-media"><img src="assets/img/${o.slug}.jpg" alt="" width="800" height="500" loading="lazy"></div>
             <div class="offer-body">
               <h2><a href="${offerUrl(o)}">${o.name}</a></h2>
               <p class="offer-hook">${o.hook}</p>
@@ -684,9 +685,11 @@ function partnersBand() {
           <h2 id="titre-partenaires" class="title-rule">Les compagnies avec lesquelles nous travaillons</h2>
           <p class="muted">Nous comparons pour vous les offres des plus grandes compagnies d’assurances de la place.</p>
         </div>
-        <ul class="partners">
-          ${slots}
-        </ul>
+        <div class="partners-marquee" data-marquee>
+          <ul class="partners-track">
+            ${slots}
+          </ul>
+        </div>
       </div>
     </section>`;
 }
